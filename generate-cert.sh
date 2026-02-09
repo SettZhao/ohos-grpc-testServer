@@ -9,12 +9,25 @@ mkdir -p $CERT_DIR
 
 echo "开始生成自签名证书..."
 
+# 自动获取服务器公网IP
+echo "正在检测服务器公网IP..."
+SERVER_IP=$(curl -s --connect-timeout 5 ifconfig.me 2>/dev/null || \
+            curl -s --connect-timeout 5 ip.sb 2>/dev/null || \
+            curl -s --connect-timeout 5 api.ipify.org 2>/dev/null || \
+            echo "localhost")
+
+if [ "$SERVER_IP" = "localhost" ]; then
+    echo "⚠️  无法获取公网IP，使用 localhost"
+else
+    echo "✓ 检测到公网IP: $SERVER_IP"
+fi
+
 # 生成私钥
 openssl genrsa -out $CERT_DIR/server.key 2048
 
-# 生成证书签名请求（CSR）
+# 生成证书签名请求（CSR），使用检测到的IP或localhost
 openssl req -new -key $CERT_DIR/server.key -out $CERT_DIR/server.csr \
-    -subj "/C=CN/ST=Beijing/L=Beijing/O=TestOrg/OU=TestUnit/CN=localhost"
+    -subj "/C=CN/ST=Beijing/L=Beijing/O=TestOrg/OU=TestUnit/CN=$SERVER_IP"
 
 # 生成自签名证书
 openssl x509 -req -days $DAYS -in $CERT_DIR/server.csr \
@@ -23,9 +36,11 @@ openssl x509 -req -days $DAYS -in $CERT_DIR/server.csr \
 # 清理 CSR 文件
 rm $CERT_DIR/server.csr
 
+echo ""
 echo "证书生成完成！"
 echo "私钥: $CERT_DIR/server.key"
 echo "证书: $CERT_DIR/server.crt"
+echo "CN字段: $SERVER_IP"
 echo "有效期: $DAYS 天"
 
 # 显示证书信息
