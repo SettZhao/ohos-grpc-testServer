@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package stream;
+
+option go_package = "ohos-grpc-testServer/proto";
+
+// 流式服务
+service StreamService {
+  // 服务器流式 RPC - 发送一个请求，接收多个响应流
+  rpc GetNumbers(NumberRequest) returns (stream NumberResponse) {}
+}
+
+// 请求消息
+message NumberRequest {
+  int32 count = 1;  // 要生成的数字数量
+  int32 delay_ms = 2;  // 每个数字之间的延迟（毫秒）
+}
+
+// 响应消息
+message NumberResponse {
+  int32 number = 1;
+  string timestamp = 2;
+}
