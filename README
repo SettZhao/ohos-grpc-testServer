@@ -1,8 +1,8 @@
 用于鸿蒙ohos/grpc-node的测试服务器
 
-# gRPC 流式服务器和客户端示例
+# gRPC 流式服务器和客户端示例 (带 TLS 加密)
 
-这是一个简单的 gRPC 服务器和客户端实现，演示了服务器流式传输 (Server Streaming RPC)。
+这是一个支持 TLS 加密的 gRPC 服务器和客户端实现，演示了服务器流式传输 (Server Streaming RPC)。
 
 ## 项目结构
 
@@ -11,19 +11,40 @@
 │   ├── stream.proto
 │   ├── stream.pb.go
 │   └── stream_grpc.pb.go
+├── certs/              # TLS 证书目录（自动生成）
+│   ├── server.key      # 服务器私钥
+│   └── server.crt      # 服务器证书
 ├── testClient/         # 客户端代码
 │   └── client.go
 ├── main.go            # 服务器代码
+├── generate-cert.sh   # 证书生成脚本（Linux/云服务器）
+├── generate-cert.ps1  # 证书生成脚本（Windows）
 ├── go.mod
-└── README
+├── README
+└── TLS-CONFIG.md      # TLS 详细配置说明
 ```
 
 ## 功能说明
 
-- **服务器**: 实现了一个流式 RPC 服务 `GetNumbers`，可以根据客户端请求生成指定数量的数字序列，并通过流式传输发送给客户端
-- **客户端**: 使用 ClientReadableStream 接收服务器发送的流式数据
+- **服务器**: 实现了一个流式 RPC 服务 `GetNumbers`，带 TLS 加密支持
+- **客户端**: 使用 ClientReadableStream 接收服务器发送的流式数据，支持跳过证书校验
+- **安全传输**: 所有数据通过 TLS 加密传输
 
-## 如何运行
+## 快速开始
+
+### 0. 生成 TLS 证书
+
+**首次运行前必须先生成证书！**
+
+Linux/云服务器：
+```bash
+bash generate-cert.sh
+```
+
+Windows：
+```bash
+bash generate-cert.sh    # 使用 Git Bash
+```
 
 ### 1. 启动服务器
 
@@ -33,7 +54,7 @@
 go run main.go
 ```
 
-服务器将在端口 50051 上启动并等待客户端连接。
+服务器将在端口 50051 上启动（TLS 已启用）。
 
 ### 2. 运行客户端
 
@@ -43,7 +64,27 @@ go run main.go
 go run testClient/client.go
 ```
 
-客户端将连接到服务器，请求 10 个数字（每个数字间隔 500ms），并通过流式接收这些数据。
+客户端将通过 TLS 连接到服务器。
+
+## 当前行为
+
+⚠️ **注意**：当前服务器配置为测试模式，会立即关闭流并返回错误：
+```
+服务器拒绝处理此请求：测试异常场景
+```
+
+这是故意设计的，用于测试客户端的错误处理。
+
+## 云服务器部署
+
+详细的云服务器部署说明请查看 [TLS-CONFIG.md](TLS-CONFIG.md)
+
+简要步骤：
+1. 上传代码到云服务器
+2. 运行 `bash generate-cert.sh` 生成证书
+3. 修改证书 CN 字段为域名或公网 IP（可选）
+4. 编译并运行：`go build -o server main.go && ./server`
+5. 确保防火墙开放 50051 端口
 
 ## Proto 定义
 
@@ -65,6 +106,14 @@ service StreamService {
 ```bash
 protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/stream.proto
 ```
+
+## TLS 安全说明
+
+- ✅ 传输已加密（TLS）
+- ⚠️ 使用自签名证书
+- ⚠️ 客户端跳过证书校验（`InsecureSkipVerify: true`）
+
+**生产环境建议**：使用 CA 签名的证书并启用证书校验。详见 [TLS-CONFIG.md](TLS-CONFIG.md)
 
 ## 依赖
 

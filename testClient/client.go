@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -10,13 +11,19 @@ import (
 	pb "ohos-grpc-testServer/proto"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 func main() {
+	// 配置 TLS - 跳过证书校验（用于自签名证书）
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true, // 跳过证书校验
+	}
+	creds := credentials.NewTLS(tlsConfig)
+
 	// 连接到 gRPC 服务器
 	serverAddr := "localhost:50051"
-	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Fatalf("连接失败: %v", err)
 	}
@@ -25,7 +32,7 @@ func main() {
 	// 创建客户端
 	client := pb.NewStreamServiceClient(conn)
 
-	fmt.Printf("已连接到服务器: %s\n", serverAddr)
+	fmt.Printf("已连接到服务器 (TLS): %s\n", serverAddr)
 	fmt.Println("=" + string(make([]byte, 50)))
 
 	// 发送请求并获取流

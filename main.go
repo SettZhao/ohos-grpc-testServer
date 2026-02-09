@@ -10,6 +10,7 @@ import (
 	pb "ohos-grpc-testServer/proto"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // StreamServiceServer 实现流式服务
@@ -30,6 +31,14 @@ func (s *StreamServiceServer) GetNumbers(req *pb.NumberRequest, stream pb.Stream
 }
 
 func main() {
+	// 加载 TLS 证书
+	certFile := "certs/server.crt"
+	keyFile := "certs/server.key"
+	creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
+	if err != nil {
+		log.Fatalf("加载证书失败: %v", err)
+	}
+
 	// 监听端口
 	port := ":50051"
 	listener, err := net.Listen("tcp", port)
@@ -37,13 +46,13 @@ func main() {
 		log.Fatalf("监听失败: %v", err)
 	}
 
-	// 创建 gRPC 服务器
-	grpcServer := grpc.NewServer()
+	// 创建带 TLS 的 gRPC 服务器
+	grpcServer := grpc.NewServer(grpc.Creds(creds))
 
 	// 注册服务
 	pb.RegisterStreamServiceServer(grpcServer, &StreamServiceServer{})
 
-	fmt.Printf("gRPC 服务器启动，监听端口 %s\n", port)
+	fmt.Printf("gRPC 服务器启动 (TLS已启用)，监听端口 %s\n", port)
 	log.Printf("等待客户端连接...\n")
 
 	// 启动服务器
